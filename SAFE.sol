@@ -760,7 +760,7 @@ contract ERC20 is Context, BEP20 {
 contract SAFE is ERC20("SAFE", "SAFE"), Ownable {
 
     constructor () public {
-      uint256 totalSupply = 100_000e18; // 100k Total supply, no minting functions
+      uint256 totalSupply = 116_500e18; // 116,500 Total supply, no minting functions
       _mint(msg.sender, totalSupply);
       _moveDelegates(address(0), _delegates[msg.sender], totalSupply);
     }
