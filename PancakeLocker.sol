@@ -631,7 +631,7 @@ interface IPancakePair {
     function token1() external view returns (address);
 }
 
-interface IERCBurn {
+interface IBEPBurn {
     function burn(uint256 _amount) external;
     function approve(address spender, uint256 amount) external returns (bool);
     function allowance(address owner, address spender) external returns (uint256);
@@ -654,7 +654,7 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
 
   struct UserInfo {
     EnumerableSet.AddressSet lockedTokens; // records all tokens the user has locked
-    mapping(address => uint256[]) locksForToken; // map erc20 address to lock id for that token
+    mapping(address => uint256[]) locksForToken; // map bep20 address to lock id for that token
   }
 
   struct TokenLock {
@@ -673,12 +673,12 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
   
   struct FeeStruct {
     uint256 bnbFee; // Small bnb fee to prevent spam on the platform
-    IERCBurn secondaryFeeToken; // SAFE
+    IBEPBurn secondaryFeeToken; // SAFE
     uint256 secondaryTokenFee; // optional, SAFE
     uint256 secondaryTokenDiscount; // discount on liquidity fee for burning secondaryToken
     uint256 liquidityFee; // fee on cake-lp liquidity tokens
     uint256 referralPercent; // fee for referrals
-    IERCBurn referralToken; // token the refferer must hold to qualify as a referrer
+    IBEPBurn referralToken; // token the refferer must hold to qualify as a referrer
     uint256 referralHold; // balance the referrer must hold to qualify as a referrer
     uint256 referralDiscount; // discount on flatrate fees for using a valid referral address
   }
@@ -717,13 +717,13 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
   }
   
   function setSecondaryFeeToken(address _secondaryFeeToken) public onlyOwner {
-    gFees.secondaryFeeToken = IERCBurn(_secondaryFeeToken);
+    gFees.secondaryFeeToken = IBEPBurn(_secondaryFeeToken);
   }
   
   /**
    * @notice referrers need to hold the specified token and hold amount to be elegible for referral fees
    */
-  function setReferralTokenAndHold(IERCBurn _referralToken, uint256 _hold) public onlyOwner {
+  function setReferralTokenAndHold(IBEPBurn _referralToken, uint256 _hold) public onlyOwner {
     gFees.referralToken = _referralToken;
     gFees.referralHold = _hold;
   }
