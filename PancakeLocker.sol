@@ -642,10 +642,6 @@ interface IPancakeFactory {
     function getPair(address tokenA, address tokenB) external view returns (address);
 }
 
-interface IMigrator {
-    function migrate(address lpToken, uint256 amount, uint256 unlockDate, address owner) external returns (bool);
-}
-
 contract CakeSafeLocker is Ownable, ReentrancyGuard {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -688,8 +684,6 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
   
   address payable devaddr;
   
-  IMigrator migrator;
-
   event onDeposit(address lpToken, address user, uint256 amount, uint256 lockDate, uint256 unlockDate);
   event onWithdraw(address lpToken, uint256 amount);
 
@@ -707,13 +701,6 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
   
   function setDev(address payable _devaddr) public onlyOwner {
     devaddr = _devaddr;
-  }
-  
-  /**
-   * @notice set the migrator contract which allows locked lp tokens to be migrated to pancakeswap upgrade
-   */
-  function setMigrator(IMigrator _migrator) public onlyOwner {
-    migrator = _migrator;
   }
   
   function setSecondaryFeeToken(address _secondaryFeeToken) public onlyOwner {
@@ -958,32 +945,6 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
       users[msg.sender].lockedTokens.remove(_lpToken);
     }
     transferredLock.owner = _newOwner;
-  }
-  
-  /**
-   * @notice migrates liquidity to PancakeSwap upgrade
-   */
-  function migrate (address _lpToken, uint256 _index, uint256 _lockID, uint256 _amount) external nonReentrant {
-    require(address(migrator) != address(0), "NOT SET");
-    require(_amount > 0, 'ZERO MIGRATION');
-    
-    uint256 lockID = users[msg.sender].locksForToken[_lpToken][_index];
-    TokenLock storage userLock = tokenLocks[_lpToken][lockID];
-    require(lockID == _lockID && userLock.owner == msg.sender, 'LOCK MISMATCH'); // ensures correct lock is affected
-    userLock.amount = userLock.amount.sub(_amount);
-    
-    // clean user storage
-    if (userLock.amount == 0) {
-      uint256[] storage userLocks = users[msg.sender].locksForToken[_lpToken];
-      userLocks[_index] = userLocks[userLocks.length-1];
-      userLocks.pop();
-      if (userLocks.length == 0) {
-        users[msg.sender].lockedTokens.remove(_lpToken);
-      }
-    }
-    
-    TransferHelper.safeApprove(_lpToken, address(migrator), _amount);
-    migrator.migrate(_lpToken, _amount, userLock.unlockDate, msg.sender);
   }
   
   function getNumLocksForToken (address _lpToken) external view returns (uint256) {
