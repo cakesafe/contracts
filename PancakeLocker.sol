@@ -782,7 +782,6 @@ contract CakeSafeLocker is Ownable, ReentrancyGuard {
         TransferHelper.safeTransferFrom(address(gFees.secondaryFeeToken), address(msg.sender), address(this), burnFee);
         if (gFees.referralPercent != 0 && _referral != address(0)) { // referral fee
           uint256 referralFee = burnFee.mul(gFees.referralPercent).div(1000);
-          TransferHelper.safeApprove(address(gFees.secondaryFeeToken), _referral, referralFee);
           TransferHelper.safeTransfer(address(gFees.secondaryFeeToken), _referral, referralFee);
           burnFee = burnFee.sub(referralFee);
         }
