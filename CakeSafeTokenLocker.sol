@@ -76,8 +76,10 @@ contract CakeSafeTokenLocker is owned{
         bool withdrawn;
     }
     
+
     uint256 public depositId;
     uint256[] public allDepositIds;
+    mapping (address => uint256[]) public depositsByTokenAddress;
     mapping (address => uint256[]) public depositsByWithdrawalAddress;
     mapping (uint256 => Items) public lockedToken;
     mapping (address => mapping(address => uint256)) public walletTokenBalance;
@@ -239,6 +241,11 @@ contract CakeSafeTokenLocker is owned{
     function getDepositsByWithdrawalAddress(address _withdrawalAddress) view public returns (uint256[])
     {
         return depositsByWithdrawalAddress[_withdrawalAddress];
+    }  
+
+  /*get DepositsByTokenAddress*/
+    function getDepositsByTokenAddress(address _tokenAddress) view public returns (uint256[])
+    {
+        return depositsByTokenAddress[_tokenAddress];
     }
-    
 }
