@@ -105,6 +105,7 @@ contract CakeSafeTokenLocker is owned{
         
         allDepositIds.push(_id);
         depositsByWithdrawalAddress[_withdrawalAddress].push(_id);
+        depositsByTokenAddress[_tokenAddress].push(_id);
         
         // transfer tokens into contract
         require(Token(_tokenAddress).transferFrom(msg.sender, this, _amount));
@@ -134,6 +135,7 @@ contract CakeSafeTokenLocker is owned{
             
             allDepositIds.push(_id);
             depositsByWithdrawalAddress[_withdrawalAddress].push(_id);
+            depositsByTokenAddress[_tokenAddress].push(_id);
             
             //transfer tokens into contract
             require(Token(_tokenAddress).transferFrom(msg.sender, this, _amounts[i]));
