@@ -646,7 +646,7 @@ interface IMigrator {
     function migrate(address lpToken, uint256 amount, uint256 unlockDate, address owner) external returns (bool);
 }
 
-contract MaticSafeLocker is Ownable, ReentrancyGuard {
+contract PolySafeLocker is Ownable, ReentrancyGuard {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
