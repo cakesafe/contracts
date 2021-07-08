@@ -625,7 +625,7 @@ library TransferHelper {
 
 }
 
-interface ISpookyPair {
+interface IKoffeePair {
     function factory() external view returns (address);
     function token0() external view returns (address);
     function token1() external view returns (address);
@@ -638,7 +638,7 @@ interface IERCBurn {
     function balanceOf(address account) external view returns (uint256);
 }
 
-interface ISpookyFactory {
+interface IKoffeeFactory {
     function getPair(address tokenA, address tokenB) external view returns (address);
 }
 
@@ -650,7 +650,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  ISpookyFactory public spookyFactory;
+  IKoffeeFactory public koffeeFactory;
 
   struct UserInfo {
     EnumerableSet.AddressSet lockedTokens; // records all tokens the user has locked
@@ -669,14 +669,14 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
   mapping(address => UserInfo) private users;
 
   EnumerableSet.AddressSet private lockedTokens;
-  mapping(address => TokenLock[]) public tokenLocks; //map SPOOKY-LP pair to all its locks
+  mapping(address => TokenLock[]) public tokenLocks; //map KOFFEE-LP pair to all its locks
   
   struct FeeStruct {
-    uint256 ftmFee; // Small ftm fee to prevent spam on the platform
+    uint256 kcsFee; // Small kcs fee to prevent spam on the platform
     IERCBurn secondaryFeeToken; // SAFE
     uint256 secondaryTokenFee; // optional, SAFE
     uint256 secondaryTokenDiscount; // discount on liquidity fee for burning secondaryToken
-    uint256 liquidityFee; // fee on SPOOKY-LP liquidity tokens
+    uint256 liquidityFee; // fee on KOFFEE-LP liquidity tokens
     uint256 referralPercent; // fee for referrals
     IERCBurn referralToken; // token the refferer must hold to qualify as a referrer
     uint256 referralHold; // balance the referrer must hold to qualify as a referrer
@@ -693,16 +693,16 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
   event onDeposit(address lpToken, address user, uint256 amount, uint256 lockDate, uint256 unlockDate);
   event onWithdraw(address lpToken, uint256 amount);
 
-  constructor(ISpookyFactory _spookyFactory) public {
+  constructor(IKoffeeFactory _koffeeFactory) public {
     devaddr = msg.sender;
     gFees.referralPercent = 250; // 25%
-    gFees.ftmFee = 1000e18;
+    gFees.kcsFee = 1000e18;
     gFees.secondaryTokenFee = 10e18;
     gFees.secondaryTokenDiscount = 200; // 20%
     gFees.liquidityFee = 10; // 1%
     gFees.referralHold = 10e18;
     gFees.referralDiscount = 100; // 10%
-    spookyFactory = _spookyFactory;
+    koffeeFactory = _koffeeFactory;
   }
   
   function setDev(address payable _devaddr) public onlyOwner {
@@ -710,7 +710,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
   }
 
     /**
-   * @notice set the migrator contract which allows locked lp tokens to be migrated to SpookySwap V3
+   * @notice set the migrator contract which allows locked lp tokens to be migrated to KoffeeSwap V3
    */
   function setMigrator(IMigrator _migrator) public onlyOwner {
     migrator = _migrator;
@@ -728,10 +728,10 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     gFees.referralHold = _hold;
   }
   
-  function setFees(uint256 _referralPercent, uint256 _referralDiscount, uint256 _ftmFee, uint256 _secondaryTokenFee, uint256 _secondaryTokenDiscount, uint256 _liquidityFee) public onlyOwner {
+  function setFees(uint256 _referralPercent, uint256 _referralDiscount, uint256 _kcsFee, uint256 _secondaryTokenFee, uint256 _secondaryTokenDiscount, uint256 _liquidityFee) public onlyOwner {
     gFees.referralPercent = _referralPercent;
     gFees.referralDiscount = _referralDiscount;
-    gFees.ftmFee = _ftmFee;
+    gFees.kcsFee = _kcsFee;
     gFees.secondaryTokenFee = _secondaryTokenFee;
     gFees.secondaryTokenDiscount = _secondaryTokenDiscount;
     gFees.liquidityFee = _liquidityFee;
@@ -750,21 +750,21 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
 
   /**
    * @notice Creates a new lock
-   * @param _lpToken the SPOOKY-LP token address
+   * @param _lpToken the KOFFEE-LP token address
    * @param _amount amount of LP tokens to lock
    * @param _unlock_date the unix timestamp (in seconds) until unlock
    * @param _referral the referrer address if any or address(0) for none
-   * @param _fee_in_ftm fees can be paid in ftm or in a secondary token such as SAFE with a discount on SPOOKY-LP tokens
+   * @param _fee_in_kcs fees can be paid in kcs or in a secondary token such as SAFE with a discount on KOFFEE-LP tokens
    * @param _withdrawer the user who can withdraw liquidity once the lock expires.
    */
-  function lockLPToken (address _lpToken, uint256 _amount, uint256 _unlock_date, address payable _referral, bool _fee_in_ftm, address payable _withdrawer) external payable nonReentrant {
+  function lockLPToken (address _lpToken, uint256 _amount, uint256 _unlock_date, address payable _referral, bool _fee_in_kcs, address payable _withdrawer) external payable nonReentrant {
     require(_unlock_date < 10000000000, 'TIMESTAMP INVALID'); // prevents errors when timestamp entered in milliseconds
     require(_amount > 0, 'INSUFFICIENT');
 
-    // ensure this pair is a spooky pair by querying the factory
-    ISpookyPair lpair = ISpookyPair(address(_lpToken));
-    address factoryPairAddress = spookyFactory.getPair(lpair.token0(), lpair.token1());
-    require(factoryPairAddress == address(_lpToken), 'NOT SPOOKY-LP');
+    // ensure this pair is a koffee pair by querying the factory
+    IKoffeePair lpair = IKoffeePair(address(_lpToken));
+    address factoryPairAddress = koffeeFactory.getPair(lpair.token0(), lpair.token1());
+    require(factoryPairAddress == address(_lpToken), 'NOT KOFFEE-LP');
 
     TransferHelper.safeTransferFrom(_lpToken, address(msg.sender), address(this), _amount);
     
@@ -774,14 +774,14 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     
     // flatrate fees
     if (!feeWhitelist.contains(msg.sender)) {
-      if (_fee_in_ftm) { // charge fee in ftm
-        uint256 ftmFee = gFees.ftmFee;
+      if (_fee_in_kcs) { // charge fee in kcs
+        uint256 kcsFee = gFees.kcsFee;
         if (_referral != address(0)) {
-          ftmFee = ftmFee.mul(1000 - gFees.referralDiscount).div(1000);
+          kcsFee = kcsFee.mul(1000 - gFees.referralDiscount).div(1000);
         }
-        require(msg.value == ftmFee, 'FEE NOT MET');
-        uint256 devFee = ftmFee;
-        if (ftmFee != 0 && _referral != address(0)) { // referral fee
+        require(msg.value == kcsFee, 'FEE NOT MET');
+        uint256 devFee = kcsFee;
+        if (kcsFee != 0 && _referral != address(0)) { // referral fee
           uint256 referralFee = devFee.mul(gFees.referralPercent).div(1000);
           _referral.transfer(referralFee);
           devFee = devFee.sub(referralFee);
@@ -801,13 +801,13 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
         gFees.secondaryFeeToken.burn(burnFee);
       }
     } else if (msg.value > 0){
-      // refund ftm if a whitelisted member sent it by mistake
+      // refund kcs if a whitelisted member sent it by mistake
       msg.sender.transfer(msg.value);
     }
     
     // percent fee
     uint256 liquidityFee = _amount.mul(gFees.liquidityFee).div(1000);
-    if (!_fee_in_ftm && !feeWhitelist.contains(msg.sender)) { // fee discount for large lockers using secondary token
+    if (!_fee_in_kcs && !feeWhitelist.contains(msg.sender)) { // fee discount for large lockers using secondary token
       liquidityFee = liquidityFee.mul(1000 - gFees.secondaryTokenDiscount).div(1000);
     }
     TransferHelper.safeTransfer(_lpToken, devaddr, liquidityFee);
@@ -821,7 +821,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     token_lock.lockID = tokenLocks[_lpToken].length;
     token_lock.owner = _withdrawer;
 
-    // record the lock for the SPOOKY-LP
+    // record the lock for the KOFFEE-LP
     tokenLocks[_lpToken].push(token_lock);
     lockedTokens.add(_lpToken);
 
@@ -851,7 +851,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     userLock.amount = amountLocked;
     userLock.unlockDate = _unlock_date;
 
-    // send ftm fee to dev address
+    // send kcs fee to dev address
     TransferHelper.safeTransfer(_lpToken, devaddr, liquidityFee);
   }
   
@@ -892,7 +892,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     
     TransferHelper.safeTransferFrom(_lpToken, address(msg.sender), address(this), _amount);
     
-    // send ftm fee to dev address
+    // send kcs fee to dev address
     uint256 liquidityFee = _amount.mul(gFees.liquidityFee).div(1000);
     TransferHelper.safeTransfer(_lpToken, devaddr, liquidityFee);
     uint256 amountLocked = _amount.sub(liquidityFee);
@@ -912,8 +912,8 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     TokenLock storage userLock = tokenLocks[_lpToken][lockID];
     require(lockID == _lockID && userLock.owner == msg.sender, 'LOCK MISMATCH'); // ensures correct lock is affected
     
-    require(msg.value == gFees.ftmFee, 'FEE NOT MET');
-    devaddr.transfer(gFees.ftmFee);
+    require(msg.value == gFees.kcsFee, 'FEE NOT MET');
+    devaddr.transfer(gFees.kcsFee);
     
     userLock.amount = userLock.amount.sub(_amount);
     
@@ -925,7 +925,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
     token_lock.lockID = tokenLocks[_lpToken].length;
     token_lock.owner = msg.sender;
 
-    // record the lock for the SPOOKY-LP pair
+    // record the lock for the KOFFEE-LP pair
     tokenLocks[_lpToken].push(token_lock);
 
     // record the lock for the user
@@ -960,7 +960,7 @@ contract OperaSafeLocker is Ownable, ReentrancyGuard {
   }
 
   /**
-   * @notice migrates liquidity to SpookySwap V2
+   * @notice migrates liquidity to KoffeeSwap V2
    */
   function migrate (address _lpToken, uint256 _index, uint256 _lockID, uint256 _amount) external nonReentrant {
     require(address(migrator) != address(0), "NOT SET");
